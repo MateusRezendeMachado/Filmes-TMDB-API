@@ -1,5 +1,6 @@
 // CONFIGURAÇÕES API TMDB
 const urlBaseFilmes = "https://api.themoviedb.org/3/movie/popular?language=pt-BR";
+const urlBaseBusca = "https://api.themoviedb.org/3/search/movie?language=pt-BR";
 const urlGeneros = "https://api.themoviedb.org/3/genre/movie/list?language=pt-BR";
 const urlImagem = "https://image.tmdb.org/t/p/w500";
 
@@ -13,12 +14,15 @@ const options = {
     }
 };
 
-// ESTADO DA PAGINAÇÃO 
+// ESTADO DA APLICAÇÃO
 let paginaAtual = 1;
 let totalPaginas = 1;
 let listaGeneros = [];
+let modoBusca = false;
+let termoBuscaAtual = "";
+let debounceTimeout = null; // para controle do debounce
 
-
+// ELEMENTOS DOM
 const catalogoDiv = document.getElementById("catalogo");
 const modalOverlay = document.getElementById("modalOverlay");
 const modalPoster = document.getElementById("modalPoster");
@@ -34,7 +38,12 @@ const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const pageInfo = document.getElementById("pageInfo");
 
-// FUNÇÃO PARA BUSCAR GÊNEROS
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+
+const themeBtn = document.getElementById("themeToggle");
+
+// BUSCAR GÊNEROS
 async function buscarGeneros() {
     const resposta = await fetch(urlGeneros, options);
 
@@ -46,7 +55,7 @@ async function buscarGeneros() {
     return dados.genres;
 }
 
-//  FUNÇÃO AUXILIAR PARA GERAR ESTRELAS
+// GERAR ESTRELAS (usando Font Awesome)
 function gerarEstrelas(nota) {
     const notaEm5 = (nota / 10) * 5;
     const estrelasCheias = Math.floor(notaEm5);
@@ -59,17 +68,75 @@ function gerarEstrelas(nota) {
     return estrelas;
 }
 
-// ===================== ATUALIZA CONTROLES DA PAGINAÇÃO =====================
+// ATUALIZAR PAGINAÇÃO
 function atualizarPaginacao() {
-    pageInfo.textContent = `Página ${paginaAtual}`;
+    if (modoBusca) {
+        pageInfo.textContent = `Busca: página ${paginaAtual}`;
+    } else {
+        pageInfo.textContent = `Página ${paginaAtual}`;
+    }
+
     prevBtn.disabled = paginaAtual === 1;
-    nextBtn.disabled = paginaAtual === totalPaginas;
+    nextBtn.disabled = paginaAtual === totalPaginas || totalPaginas === 0;
 }
 
-// ===================== CARREGAR FILMES DA PÁGINA ATUAL =====================
+// RENDERIZAR FILMES
+function renderizarFilmes(filmes) {
+    catalogoDiv.innerHTML = "";
+
+    if (!filmes || filmes.length === 0) {
+        catalogoDiv.innerHTML = `
+      <p style="text-align: center; padding: 2rem;">
+        Nenhum filme encontrado.
+      </p>
+    `;
+        return;
+    }
+
+    filmes.forEach(filme => {
+        const nomesGeneros = filme.genre_ids.map(id => {
+            const genero = listaGeneros.find(g => g.id === id);
+            return genero ? genero.name : "Desconhecido";
+        });
+
+        const nota = filme.vote_average.toFixed(1);
+
+        const card = document.createElement("div");
+        card.classList.add("card");
+
+        card.innerHTML = `
+      <img 
+        src="${filme.poster_path ? urlImagem + filme.poster_path : "https://via.placeholder.com/500x750?text=Sem+Poster"}" 
+        alt="${filme.title}" 
+        loading="lazy"
+      >
+      <div class="card-content">
+        <h2>${filme.title}</h2>
+        <div class="generos">
+          ${nomesGeneros.map(genero => `<span>${genero}</span>`).join("")}
+        </div>
+        <div class="rating">
+          ${gerarEstrelas(filme.vote_average)} <span>${nota} / 10</span>
+        </div>
+      </div>
+    `;
+
+        card.addEventListener("click", () => {
+            abrirModal(filme);
+        });
+
+        catalogoDiv.appendChild(card);
+    });
+}
+
+// CARREGAR FILMES POPULARES
 async function carregarFilmes(pagina = 1) {
     try {
-        catalogoDiv.innerHTML = `<p style="text-align:center; padding:2rem;">Carregando filmes...</p>`;
+        catalogoDiv.innerHTML = `
+      <p style="text-align: center; padding: 2rem;">
+        Carregando filmes...
+      </p>
+    `;
 
         const respostaFilmes = await fetch(`${urlBaseFilmes}&page=${pagina}`, options);
 
@@ -81,6 +148,7 @@ async function carregarFilmes(pagina = 1) {
 
         paginaAtual = dadosFilmes.page;
         totalPaginas = dadosFilmes.total_pages;
+        modoBusca = false;
 
         if (listaGeneros.length === 0) {
             listaGeneros = await buscarGeneros();
@@ -88,46 +156,18 @@ async function carregarFilmes(pagina = 1) {
 
         const filmes = dadosFilmes.results.slice(0, 10);
 
-        catalogoDiv.innerHTML = "";
-
-        filmes.forEach(filme => {
-            const nomesGeneros = filme.genre_ids.map(id => {
-                const genero = listaGeneros.find(g => g.id === id);
-                return genero ? genero.name : "Desconhecido";
-            });
-
-            const nota = filme.vote_average.toFixed(1);
-
-            const card = document.createElement("div");
-            card.classList.add("card");
-
-            card.innerHTML = `
-        <img src="${filme.poster_path ? urlImagem + filme.poster_path : "https://via.placeholder.com/500x750?text=Sem+Poster"}" alt="${filme.title}" loading="lazy">
-        <div class="card-content">
-          <h2>${filme.title}</h2>
-          <div class="generos">
-            ${nomesGeneros.map(g => `<span>${g}</span>`).join("")}
-          </div>
-          <div class="rating">
-            ${gerarEstrelas(filme.vote_average)} <span>${nota} / 10</span>
-          </div>
-        </div>
-      `;
-
-            card.addEventListener("click", () => {
-                abrirModal(filme, listaGeneros);
-            });
-
-            catalogoDiv.appendChild(card);
-        });
-
+        renderizarFilmes(filmes);
         atualizarPaginacao();
-        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
 
     } catch (erro) {
         console.error("Erro ao carregar filmes:", erro);
         catalogoDiv.innerHTML = `
-      <p style="text-align:center; padding:2rem;">
+      <p style="text-align: center; padding: 2rem;">
         ❌ ${erro.message}<br>
         Verifique sua conexão ou token da API.
       </p>
@@ -135,8 +175,76 @@ async function carregarFilmes(pagina = 1) {
     }
 }
 
-// ===================== FUNÇÃO PARA ABRIR MODAL COM INFORMAÇÕES COMPLETAS =====================
-function abrirModal(filme, listaGeneros) {
+// BUSCAR FILMES POR NOME
+async function buscarFilmesPorNome(termo, pagina = 1) {
+    try {
+        catalogoDiv.innerHTML = `
+      <p style="text-align: center; padding: 2rem;">
+        Buscando filmes...
+      </p>
+    `;
+
+        const urlBusca = `${urlBaseBusca}&query=${encodeURIComponent(termo)}&page=${pagina}`;
+        const resposta = await fetch(urlBusca, options);
+
+        if (!resposta.ok) {
+            throw new Error(`Erro na busca: ${resposta.status}`);
+        }
+
+        const dados = await resposta.json();
+
+        paginaAtual = dados.page;
+        totalPaginas = dados.total_pages;
+        modoBusca = true;
+        termoBuscaAtual = termo;
+
+        if (listaGeneros.length === 0) {
+            listaGeneros = await buscarGeneros();
+        }
+
+        const filmes = dados.results.slice(0, 10);
+
+        renderizarFilmes(filmes);
+        atualizarPaginacao();
+
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth"
+        });
+
+    } catch (erro) {
+        console.error("Erro ao buscar filmes:", erro);
+        catalogoDiv.innerHTML = `
+      <p style="text-align: center; padding: 2rem;">
+        ❌ ${erro.message}
+      </p>
+    `;
+    }
+}
+
+// DEBOUNCE PARA BUSCA EM TEMPO REAL
+function debounce(func, delay) {
+    return function (...args) {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// MANIPULADOR DE BUSCA EM TEMPO REAL
+function handleRealTimeSearch() {
+    const termo = searchInput.value.trim();
+
+    if (termo === "") {
+        carregarFilmes(1);
+    } else {
+        buscarFilmesPorNome(termo, 1);
+    }
+}
+
+const debouncedSearch = debounce(handleRealTimeSearch, 300);
+
+// ABRIR MODAL
+function abrirModal(filme) {
     modalPoster.src = filme.poster_path
         ? urlImagem + filme.poster_path
         : "https://via.placeholder.com/300x450?text=Sem+Poster";
@@ -173,7 +281,7 @@ function abrirModal(filme, listaGeneros) {
     document.body.style.overflow = "hidden";
 }
 
-// ===================== FECHAR MODAL =====================
+// FECHAR MODAL
 function fecharModal() {
     modalOverlay.classList.remove("active");
     document.body.style.overflow = "";
@@ -193,20 +301,55 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
-// ===================== EVENTOS DA PAGINAÇÃO =====================
+// EVENTOS DA PAGINAÇÃO
 prevBtn.addEventListener("click", () => {
     if (paginaAtual > 1) {
-        carregarFilmes(paginaAtual - 1);
+        if (modoBusca) {
+            buscarFilmesPorNome(termoBuscaAtual, paginaAtual - 1);
+        } else {
+            carregarFilmes(paginaAtual - 1);
+        }
     }
 });
 
 nextBtn.addEventListener("click", () => {
     if (paginaAtual < totalPaginas) {
-        carregarFilmes(paginaAtual + 1);
+        if (modoBusca) {
+            buscarFilmesPorNome(termoBuscaAtual, paginaAtual + 1);
+        } else {
+            carregarFilmes(paginaAtual + 1);
+        }
     }
 });
 
-// ===================== TEMA CLARO / ESCURO =====================
+// EVENTOS DA BUSCA
+searchBtn.addEventListener("click", () => {
+    const termo = searchInput.value.trim();
+
+    if (termo === "") {
+        carregarFilmes(1);
+        return;
+    }
+
+    buscarFilmesPorNome(termo, 1);
+});
+
+searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        const termo = searchInput.value.trim();
+
+        if (termo === "") {
+            carregarFilmes(1);
+            return;
+        }
+
+        buscarFilmesPorNome(termo, 1);
+    }
+});
+
+searchInput.addEventListener("input", debouncedSearch);
+
+// TEMA CLARO / ESCURO
 function initTheme() {
     const savedTheme = localStorage.getItem("theme");
 
@@ -231,9 +374,8 @@ function toggleTheme() {
     localStorage.setItem("theme", isDark ? "dark" : "light");
 }
 
-const themeBtn = document.getElementById("themeToggle");
 themeBtn.addEventListener("click", toggleTheme);
 initTheme();
 
-// ===================== INICIALIZAÇÃO =====================
+// INICIALIZAÇÃO
 carregarFilmes();
