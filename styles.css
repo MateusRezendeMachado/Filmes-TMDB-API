@@ -1,4 +1,4 @@
-/* ===================== RESET & BASE ===================== */
+/* RESET & BASE */
 * {
     margin: 0;
     padding: 0;
@@ -13,7 +13,7 @@ body {
     color: var(--text-primary);
 }
 
-/* ===================== TEMA CLARO (PADRÃO) ===================== */
+/* TEMA CLARO (PADRÃO) */
 :root {
     --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
     --header-bg: rgba(255, 255, 255, 0.75);
@@ -31,25 +31,25 @@ body {
     --star-color: #facc15;
 }
 
-/* ===================== TEMA ESCURO ===================== */
+/* TEMA ESCURO */
 body.dark {
-  --bg-gradient: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
-  --header-bg: rgba(10, 10, 10, 0.85);
-  --card-bg: rgba(20, 20, 20, 0.75);
-  --card-hover: rgba(30, 30, 30, 0.9);
-  --text-primary: #f0f0f0;
-  --text-secondary: #b0b0b0;
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-  --border-light: rgba(255, 255, 255, 0.08);
-  --shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.6);
-  --modal-overlay: rgba(0, 0, 0, 0.9);
-  --btn-bg: #2a2a2a;
-  --btn-hover: #3a3a3a;
-  --star-color: #fbbf24;
+    --bg-gradient: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
+    --header-bg: rgba(10, 10, 10, 0.85);
+    --card-bg: rgba(20, 20, 20, 0.75);
+    --card-hover: rgba(30, 30, 30, 0.9);
+    --text-primary: #f0f0f0;
+    --text-secondary: #b0b0b0;
+    --accent: #3b82f6;
+    --accent-hover: #60a5fa;
+    --border-light: rgba(255, 255, 255, 0.08);
+    --shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.6);
+    --modal-overlay: rgba(0, 0, 0, 0.9);
+    --btn-bg: #2a2a2a;
+    --btn-hover: #3a3a3a;
+    --star-color: #fbbf24;
 }
 
-/* ===================== HEADER ===================== */
+/* HEADER */
 .topo {
     text-align: center;
     padding: 30px 20px;
@@ -101,7 +101,49 @@ body.dark {
     transform: scale(1.02);
 }
 
-/* ===================== CATÁLOGO GRID ===================== */
+.busca {
+    width: 90%;
+    max-width: 1300px;
+    margin: 10px auto 30px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.busca input {
+    width: 320px;
+    max-width: 100%;
+    padding: 12px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--border-light);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    outline: none;
+    font-size: 1rem;
+}
+
+.busca input::placeholder {
+    color: var(--text-secondary);
+}
+
+
+.busca button {
+    padding: 12px 20px;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    background: var(--btn-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+}
+
+.busca button:hover {
+    background: var(--btn-hover);
+}
+
+/* CATÁLOGO GRID */
 .catalogo {
     width: 90%;
     max-width: 1300px;
@@ -231,7 +273,7 @@ body.dark {
     color: var(--text-secondary);
 }
 
-/* ===================== MODAL (DETALHES COMPLETOS) ===================== */
+/* MODAL (DETALHES COMPLETOS) */
 .modal-overlay {
     position: fixed;
     top: 0;
